@@ -1,4 +1,3 @@
-# Azure_Data_Pipeline_Project
 # Azure Data Pipeline & Analytics Project
 
 ## Overview
