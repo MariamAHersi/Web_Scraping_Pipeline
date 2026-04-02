@@ -1,12 +1,8 @@
-#!/usr/bin/env python
-# coding: utf-8
 
 # # Ingestion - Web Scraping
 # Each book has been extracted from https://www.packtpub.com/en-gb/search?q=data%20engineering
 
-# In[ ]:
-
-
+#%%
 # Import modules
 import requests
 import re
@@ -14,9 +10,8 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 
-
-# In[ ]:
-
+print("All imports work!")
+#%%
 
 # Function to send a GET request to a URL
 # Parameters are
@@ -46,8 +41,7 @@ def send_get_request(url, user_agent_version, browser):
     return request_response
 
 
-# In[ ]:
-
+#%%
 
 # Function to extract the book information using web scraping
 # Parameters are
@@ -65,12 +59,10 @@ def get_book_information(url):
     title_element = soup.select_one('h1.product-title')
     book_title = title_element.get_text(strip=True) if title_element else None
 
-    # Get author(s) name
+    # Get author names
     authors = soup.select('div.authors')
-    # Extract and clean up
-    author_names = [author.get_text(", ", strip=True) for author in authors]
-     # Remove duplicates
-    author_names = set(author_names)
+    # Extract
+    author_names = [author.get_text(", ",) for author in authors]
     # Create string from author name(s)
     author_names = ", ".join(author_names)
    
@@ -89,9 +81,7 @@ def get_book_information(url):
         # Extract publication date
         if 'Publication date' in key.text:
           # Format date string
-          publication_date = value.text.strip()
-          # Convert date string to HTML date format
-          publication_date = pd.to_datetime(publication_date, format="%b %d, %Y").date()
+          publication_date = value.text
         # Get ISBN
         if 'ISBN-13' in key.text:
           isbn = value.text.strip()
@@ -119,17 +109,15 @@ def get_book_information(url):
 
     # Get format of book
     format_elements = soup.select('span.device-fc-black-1')
-    # Extract and clean up
-    format = list(set(element.get_text(strip=True) for element in format_elements))
-    # Create string from format
-    format = ", ".join(format)
+    # Extract and create string from format
+    format = ", ".join(set([e.get_text()for e in format_elements]))
 
     # Get price of paperback book
     prices = soup.select('span.product-details-price-tab-formattedSpecialPrice')
-    # Extract text and clean up
-    cleaned_prices = list(dict.fromkeys([price.get_text(strip=True) for price in prices]))  # Removes duplicates
-    # Remove £ symbol and convert to float
-    price = float(cleaned_prices[1].replace('£', '')) if len(cleaned_prices) > 1 else None
+    # Extract text 
+    price = None
+    if len(prices) > 1:
+        price = prices[1].get_text()
 
     # Return book details as a dictionary
     return {
@@ -145,8 +133,7 @@ def get_book_information(url):
     }
 
 
-# In[ ]:
-
+#%%
 
 # Define list of all book URLs to be scraped
 book_urls = [
@@ -215,9 +202,7 @@ book_urls = [
     ]
 
 
-# In[ ]:
-
-
+#%%
 # Empty list to store book dictionaries
 book_info_list = []
 
@@ -234,5 +219,5 @@ with ProcessPoolExecutor(max_workers=10) as executor:
 df = pd.DataFrame(book_info_list)
 
 # Convert to csv file
-df.to_csv("engineering_books_from_Packt.csv", index=False)
+df.to_csv("../data/raw/raw_data.csv", index=False)
 

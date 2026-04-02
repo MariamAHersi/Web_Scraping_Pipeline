@@ -1,13 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-#%%
+# In[ ]:
 
+
+get_ipython().system('pip install mysql-connector-python')
+get_ipython().system('pip install pandas')
 import mysql.connector
 import pandas as pd
 
 
-#%%
+# In[ ]:
+
+
 # Connect to database
 conn = mysql.connector.connect(
     host="localhost",
@@ -18,7 +23,8 @@ cursor = conn.cursor()
 cursor.execute("DROP TABLE IF EXISTS Engineering_Books")
 
 
-#%%
+# In[ ]:
+
 
 # Create 'Engineering_Books' table
 # Max URL length = 2048, we limit max URL size in db = 255
@@ -36,25 +42,29 @@ url VARCHAR(255) NOT NULL
 )""")
 
 
-#%%
+# In[ ]:
+
 
 # Load CSV
 Packt_df = pd.read_csv("engineering_books_from_Packt.csv")
 
 
-#%%
+# In[ ]:
+
 
 # Checking column names
 print(Packt_df.columns)
 
 
-#%%
+# In[ ]:
+
 
 # Convert date to sql format
 Packt_df['Publication Date'] = pd.to_datetime(Packt_df['Publication Date']).dt.strftime('%Y-%m-%d')
 
 
-#%%
+# In[ ]:
+
 
 # Inserting data into table
 for _, row in Packt_df.iterrows():
