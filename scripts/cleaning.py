@@ -2,36 +2,45 @@
 # Import the pandas library
 import pandas as pd
 # Name data frame as raw_data
-df_raw = pd.read_csv("../data/raw/raw_data.csv", header=0, sep=",")
+df_raw = pd.read_csv("../data/raw/raw_data_multithreading.csv", header=0, sep=",")
+# Import regex library for cleaning data
+import re
 
 print(df_raw.head())
 # %%
 def clean_books_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     
     # Drop rows missing critical info
-    df = df.dropna(subset=['Title', 'ISBN'])
+    df = df.dropna(subset=['Title', 'UPC'])
 
-    # Convert star ratings to numeric
-    df['Star Rating'] = pd.to_numeric(df['Star Rating'], errors='coerce')
+    # Remove duplicate books by UPC
+    df = df.drop_duplicates(subset=['UPC'])
 
-    # Convert number of ratings to numeric
-    df['Number of Ratings'] = pd.to_numeric(df['Number of Ratings'], errors='coerce')
+    # Drop column as it has no useful information for analysis
+    df.drop(columns=[ 'Product Type','Number of Reviews'])
 
-    # Convert price to float (remove £ symbol)
-    df['Price'] = df['Price'].str.replace('£', '', regex=False)
+    # Remove £ symbol from price and convert to numeric
+    df['Price'] = df['Price'].str.replace('Â£', '', regex=False)
+    # Convert price to float
     df['Price'] = pd.to_numeric(df['Price'], errors='coerce')
 
-    # Convert publication date to datetime
-    df['Publication Date'] = pd.to_datetime(df['Publication Date'], errors='coerce')
+    rating_map = {
+    'One': 1,
+    'Two': 2,
+    'Three': 3,
+    'Four': 4,
+    'Five': 5
+    }
 
-    # Remove duplicate books by ISBN
-    df = df.drop_duplicates(subset=['ISBN'])
-
-    # Standardise text columns
-    text_cols = ['Title', 'Authors', 'Format']
-    for col in text_cols:
-        df[col] = df[col].str.strip()
-
+    df['Star Rating'] = df['Star Rating'].map(rating_map)
+    # Convert star ratings to numeric
+    df['Star Rating'] = pd.to_numeric(df['Star Rating'], errors='coerce')
+    
+    # Extract numbers from the Availability column
+    df['Availability'] = df['Availability'].str.extract(r'(\d+)')
+    # Convert to numeric
+    df['Availability'] = pd.to_numeric(df['Availability'], errors='coerce')
+    
     return df
 
 #%%
@@ -39,4 +48,4 @@ def clean_books_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 df_clean = clean_books_dataframe(df_raw)
 
 #Save cleaned CSV or load to DB
-df_clean.to_csv('data/processed/books_clean.csv', index=False)
+df_clean.to_csv('../data/processed/books_clean.csv', index=False)

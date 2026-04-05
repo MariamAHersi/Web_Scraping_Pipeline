@@ -1,223 +1,156 @@
-
-# # Ingestion - Web Scraping
-# Each book has been extracted from https://www.packtpub.com/en-gb/search?q=data%20engineering
-
 #%%
-# Import modules
+# # Ingestion - Web Scraping
+# Each book has been extracted from https://books.toscrape.com
+
 import requests
-import re
+import time
+import random
 from bs4 import BeautifulSoup
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
-print("All imports work!")
-#%%
-
-# Function to send a GET request to a URL
-# Parameters are
-#   url: the book URL
-#   user_agent_version: version of the browser user agent
-#   browser: web browser being used (e.g. chrome)
-# Output is the response showing whether the GET request worked (e.g. 200)
-def send_get_request(url, user_agent_version, browser):
-
-    # Define the User-Agent string based on browser and version
-    if browser.lower() == 'chrome':
-        user_agent = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{user_agent_version}.0.0.0 Safari/537.36'
-    elif browser.lower() == 'edge':
-        user_agent = f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{user_agent_version}.0.0.0 Safari/537.36 Edg/{user_agent_version}.0.0.0'
-    else:
-        raise ValueError("Unsupported browser. Try using Chrome or Edge.")
-
-    # Headers dictionary for information about the device
-    headers = {
-        'User-Agent': user_agent,
-        'Accept-Language': 'en-US, en;q=0.5'
-    }
-
-    # Send the GET request with the user's headers
-    request_response = requests.get(url, headers=headers)
-
-    return request_response
+# -------------------------------------------------------------------
+# Get request - no fancy headers needed, books.toscrape.com is open
+# -------------------------------------------------------------------
+def send_get_request(url):
+    session = requests.Session()
+    response = session.get(url, timeout=15)
+    response.raise_for_status()
+    return response
 
 
-#%%
-
-# Function to extract the book information using web scraping
-# Parameters are
-#   url: the book URL
-# Output is the book details as a dictionary
+# -------------------------------------------------------------------
+# Scrape a single book page
+# -------------------------------------------------------------------
 def get_book_information(url):
+    try:
+        response = send_get_request(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
 
-    # Send get request for the url using send_get_request() function
-    # Use agent info from https://www.whatismybrowser.com/detect/what-is-my-user-agent/#google_vignette
-    request_response = send_get_request(url, 132, 'Chrome')
-    # Use HTML parser to extract and look through data from the HTML structure
-    soup = BeautifulSoup(request_response.content, 'html.parser')
+        # --- Title ---
+        title_el = soup.select_one('h1')
+        book_title = title_el.get_text(strip=True) if title_el else None
 
-    # Get title
-    title_element = soup.select_one('h1.product-title')
-    book_title = title_element.get_text(strip=True) if title_element else None
+        # --- Price ---
+        price_el = soup.select_one('p.price_color')
+        price = price_el.get_text(strip=True) if price_el else None
 
-    # Get author names
-    authors = soup.select('div.authors')
-    # Extract
-    author_names = [author.get_text(", ",) for author in authors]
-    # Create string from author name(s)
-    author_names = ", ".join(author_names)
-   
-    # Get year of publication
-    # Find all publication details
-    details = soup.select('div.product-details-section-content')
-    # Extract the full publication date
-    publication_date = None
+        # --- Star Rating ---
+        # Rating is stored as a word in the class name e.g. "star-rating Three"
+        rating_el = soup.select_one('p.star-rating')
+        star_rating = rating_el['class'][1] if rating_el else None  # gets the word e.g. "Three"
 
-    # Get ISBN and publication date
-    isbn = None
-    for detail in details:
-      key = detail.select_one('span.product-details-section-key')
-      value = detail.select_one('span.product-details-section-value')
-      if key and value:
-        # Extract publication date
-        if 'Publication date' in key.text:
-          # Format date string
-          publication_date = value.text
-        # Get ISBN
-        if 'ISBN-13' in key.text:
-          isbn = value.text.strip()
+        # --- Availability ---
+        availability_el = soup.select_one('p.availability')
+        availability = availability_el.get_text(strip=True) if availability_el else None
 
-    # Get star rating
-    rating = soup.select('span.star-rating-total-rating-medium')
-    # Extract only the main rating
-    star_rating = None
-    for rating in rating:
-        text = rating.get_text(strip=True)
-        # Ensure we get only single-number ratings (avoid "4.6 (18)" format)
-        if "(" not in text:
-            star_rating = text
-            # Stop at the first valid rating
+        # --- Product details table (UPC, Tax, Stock count etc.) ---
+        upc = None
+        product_type = None
+        num_reviews = None
+
+        rows = soup.select('table.table-striped tr')
+        for row in rows:
+            header = row.select_one('th')
+            value = row.select_one('td')
+            if header and value:
+                if 'UPC' in header.text:
+                    upc = value.text.strip()
+                if 'Product Type' in header.text:
+                    product_type = value.text.strip()
+                if 'Number of reviews' in header.text:
+                    num_reviews = value.text.strip()
+
+        # --- Description ---
+        description_el = soup.select_one('article.product_page > p')
+        description = description_el.get_text(strip=True) if description_el else None
+
+        # Small random delay to be polite to the server
+        time.sleep(random.uniform(1.0, 2.5))
+
+        return {
+            "UPC": upc,
+            "Title": book_title,
+            "Product Type": product_type,
+            "Price": price,
+            "Star Rating": star_rating,
+            "Availability": availability,
+            "Number of Reviews": num_reviews,
+            "Description": description,
+            "URL": url
+        }
+
+    except Exception as e:
+        print(f"[FAILED] {url}\n  Reason: {e}\n")
+        return {"URL": url, "Error": str(e)}
+
+
+# -------------------------------------------------------------------
+# Step 1: Scrape all book URLs from the catalogue pages
+# -------------------------------------------------------------------
+def get_all_book_urls(base_url="https://books.toscrape.com/catalogue/category/books/sequential-art_5/"):
+    book_urls = []
+    page = 1
+
+    while True:
+        # Each page follows this pattern
+        if page == 1:
+            url = base_url + "index.html"
+        else:
+            url = base_url + f"page-{page}.html"
+        response = send_get_request(url)
+
+        # If we get a bad response, we've gone past the last page
+        if response.status_code != 200:
             break
 
-    # Get total number of star ratings
-    num_of_ratings = soup.select('span.star-rating-total-count.size-medium')
-    # Clean up output
-    if num_of_ratings:
-        num_of_ratings = list(set([rating.get_text(strip=True).strip('()').split()[0] for rating in num_of_ratings]))[0]
-    else:
-        # Set to None if not found
-        num_of_ratings = None
+        soup = BeautifulSoup(response.content, 'html.parser')
+        books = soup.select('article.product_pod h3 a')
 
-    # Get format of book
-    format_elements = soup.select('span.device-fc-black-1')
-    # Extract and create string from format
-    format = ", ".join(set([e.get_text()for e in format_elements]))
+        # Build the full URL for each book
+        for book in books:
+            href = book.get('href', '')
+            full_url = "https://books.toscrape.com/catalogue/" + str(book['href']).replace('../', '')
+            book_urls.append(full_url)
 
-    # Get price of paperback book
-    prices = soup.select('span.product-details-price-tab-formattedSpecialPrice')
-    # Extract text 
-    price = None
-    if len(prices) > 1:
-        price = prices[1].get_text()
+        print(f"[PAGE {page}] Found {len(books)} books")
 
-    # Return book details as a dictionary
-    return {
-        "ISBN": isbn,
-        "Title": book_title,
-        "Authors": author_names,
-        "Publication Date": publication_date,
-        "Star Rating": star_rating,
-        "Number of Ratings": num_of_ratings,
-        "Price": price,
-        "Format": format,
-        "URL": url
-    }
+        # Check if there's a next page
+        next_btn = soup.select_one('li.next a')
+        if not next_btn:
+            break
+
+        page += 1
+        time.sleep(random.uniform(0.5, 1.5))
+
+    return book_urls
 
 
-#%%
+# -------------------------------------------------------------------
+# Run
+# -------------------------------------------------------------------
+if __name__ == "__main__":
 
-# Define list of all book URLs to be scraped
-book_urls = [
-    # paperbooks
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-databricks-cookbook-9781837633357",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-aws-9781804614426",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-dbt-9781803246284",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-python-9781839214189",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-google-cloud-platform-9781835080115",
-    "https://www.packtpub.com/en-gb/product/cracking-the-data-engineering-interview-9781837630776",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-apache-spark-delta-lake-and-lakehouse-9781801077743",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-aws-cookbook-9781805127284",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-scala-and-spark-9781804612583",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-aws-9781800560413",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-alteryx-9781803236483",
-    "https://www.packtpub.com/en-gb/product/data-observability-for-data-engineering-9781804616024",
-    "https://www.packtpub.com/en-gb/product/azure-data-engineering-cookbook-9781803246789",
-    "https://www.packtpub.com/en-gb/product/azure-data-engineering-cookbook-9781800206557",
-    "https://www.packtpub.com/en-gb/product/simplifying-data-engineering-and-analytics-with-delta-9781801814867",
-    "https://www.packtpub.com/en-gb/product/big-data-on-kubernetes-9781835462140",
-    "https://www.packtpub.com/en-gb/product/managing-data-as-a-product-9781835468531",
-    "https://www.packtpub.com/en-gb/product/comptia-casp-cas-004-certification-guide-9781801816779",
-    "https://www.packtpub.com/en-gb/product/automated-machine-learning-on-aws-9781801811828",
-    "https://www.packtpub.com/en-gb/product/go-recipes-for-developers-9781835464397",
-    "https://www.packtpub.com/en-gb/product/data-contracts-in-practice-9781836209157",
-    "https://www.packtpub.com/en-gb/product/hands-on-simulation-modeling-with-python-9781838985097",
-    "https://www.packtpub.com/en-gb/product/the-machine-learning-solutions-architect-handbook-9781801072168",
-    "https://www.packtpub.com/en-gb/product/hands-on-penetration-testing-with-python-9781788990820",
-    "https://www.packtpub.com/en-gb/product/mastering-kali-linux-for-advanced-penetration-testing-9781789340563",
-    "https://www.packtpub.com/en-gb/product/automated-machine-learning-9781800567689",
-    "https://www.packtpub.com/en-gb/product/machine-learning-with-lightgbm-and-python-9781800564749",
-    "https://www.packtpub.com/en-gb/product/dynamodb-cookbook-9781784393755",
-    "https://www.packtpub.com/en-gb/product/kibana-8x-a-quick-start-guide-to-data-analysis-9781803232164",
-    "https://www.packtpub.com/en-gb/product/the-self-taught-cloud-computing-engineer-9781805123705",
+    # First collect all book URLs from the catalogue
+    print("Collecting book URLs...")
+    book_urls = get_all_book_urls()
+    print(f"\nFound {len(book_urls)} books total. Starting scrape...\n")
 
-    # ebooks
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-databricks-cookbook-9781837632060",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-aws-9781804613139",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-dbt-9781803241883",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-python-9781839212307",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-google-cloud-platform-9781835085363",
-    "https://www.packtpub.com/en-gb/product/cracking-the-data-engineering-interview-9781837631070",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-apache-spark-delta-lake-and-lakehouse-9781801074322",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-aws-cookbook-9781805126850",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-scala-and-spark-9781804614327",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-aws-9781800569041",
-    "https://www.packtpub.com/en-gb/product/data-engineering-with-alteryx-9781803231983",
-    "https://www.packtpub.com/en-gb/product/data-observability-for-data-engineering-9781804612095",
-    "https://www.packtpub.com/en-gb/product/azure-data-engineering-cookbook-9781803235004",
-    "https://www.packtpub.com/en-gb/product/azure-data-engineering-cookbook-9781800201545",
-    "https://www.packtpub.com/en-gb/product/simplifying-data-engineering-and-analytics-with-delta-9781801810715",
-    "https://www.packtpub.com/en-gb/product/big-data-on-kubernetes-9781835468999",
-    "https://www.packtpub.com/en-gb/product/managing-data-as-a-product-9781835469378",
-    "https://www.packtpub.com/en-gb/product/comptia-casp-cas-004-certification-guide-9781801814485",
-    "https://www.packtpub.com/en-gb/product/automated-machine-learning-on-aws-9781801814522",
-    "https://www.packtpub.com/en-gb/product/go-recipes-for-developers-9781835464786",
-    "https://www.packtpub.com/en-gb/product/data-contracts-in-practice-9781836209140",
-    "https://www.packtpub.com/en-gb/product/hands-on-simulation-modeling-with-python-9781838988654",
-    "https://www.packtpub.com/en-gb/product/the-machine-learning-solutions-architect-handbook-9781801070416",
-    "https://www.packtpub.com/en-gb/product/hands-on-penetration-testing-with-python-9781788999465",
-    "https://www.packtpub.com/en-gb/product/mastering-kali-linux-for-advanced-penetration-testing-9781789340617",
-    "https://www.packtpub.com/en-gb/product/automated-machine-learning-9781800565524",
-    "https://www.packtpub.com/en-gb/product/dynamodb-cookbook-9781784391096",
-    "https://www.packtpub.com/en-gb/product/kibana-8x-a-quick-start-guide-to-data-analysis-9781803244051",
-    "https://www.packtpub.com/en-gb/product/the-self-taught-cloud-computing-engineer-9781805128687"
-    ]
+    results = []
 
+    with ProcessPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(get_book_information, url): url for url in book_urls}
 
-#%%
-# Empty list to store book dictionaries
-book_info_list = []
+        for future in as_completed(futures):
+            url = futures[future]
+            try:
+                result = future.result()
+                results.append(result)
+                print(f"[OK] {result.get('Title', url)}")
+            except Exception as e:
+                print(f"[ERROR] {url}: {e}")
+                results.append({"URL": url, "Error": str(e)})
 
-# Use ProcessPoolExecutor to speed up scraping using multiprocessing
-# Instead of fetching book details one at a time, a pool of worker processes is created
-# Each process runs independently and executes the get_book_information() function on different book URLs in parallel
-# Unlike multithreading, each process runs in its own memory space
-# The parameter max_workers=10 means that up to 10 separate processes can be created to allow for parallel execution
-with ProcessPoolExecutor(max_workers=10) as executor:
-    # executor.map(get_book_information, book_urls) distributes the URLs among the threads and collects the results
-    book_info_list = list(executor.map(get_book_information, book_urls))
-
-# Convert list of dictionaries to pandas DataFrame
-df = pd.DataFrame(book_info_list)
-
-# Convert to csv file
-df.to_csv("../data/raw/raw_data.csv", index=False)
-
+    df = pd.DataFrame(results)
+    df.to_csv("../data/raw/raw_data_multiprocessing.csv", index=False)
+    print(f"\nDone. {len(df)} rows saved.")
