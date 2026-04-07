@@ -17,28 +17,28 @@ This project highlights key data engineering concepts such as data collection, t
 
 ---
 ## Project Structure 
-├── .venv/                        # Virtual environment for dependencies
+├── .venv/
 
 ├── data/
-│   ├── raw/                     # Raw scraped data (CSV files)
-│   └── processed/               # Cleaned and transformed datasets
+│   ├── raw/
+│   └── processed/
 
 ├── database/
-│   ├── queries.py               # SQL queries for data analysis
-│   └── schema.py                # Database schema definitions
+│   ├── queries.py
+│   └── schema.py
 
 ├── docs/
-│   └── report_final.pdf         # Final project report
+│   └── report_final.pdf
 
-├── outputs/                     # Analysis outputs and exported results
+├── outputs/
 
 ├── pipelines/
-│   └── extracted_data_*.json    # Apache NiFi pipeline outputs
+│   └── extracted_data_*.json
 
 ├── scripts/
-│   ├── cleaning.py              # Data cleaning and preprocessing
-│   ├── ingestion_*.py           # Data ingestion scripts (MySQL & MongoDB)
-│   └── .ipynb_checkpoints/      # Notebook checkpoints
+│   ├── cleaning.py
+│   ├── ingestion_*.py
+│   └── .ipynb_checkpoints/
 
 ├── README.md
 
