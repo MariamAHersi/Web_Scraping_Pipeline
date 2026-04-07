@@ -1,76 +1,148 @@
-# Azure Data Pipeline & Analytics Project
+# Web Scraping & Data Engineering Pipeline Project
 
 ## Overview
-This project demonstrates the design and implementation of an end-to-end data pipeline using Microsoft Azure. The pipeline ingests raw data from a public GitHub source, processes and transforms it, and generates insights through analytics and visualisation tools.
+This project demonstrates an end-to-end data engineering pipeline that includes web scraping, data processing, database management, and automated data ingestion.
 
-The project showcases core data engineering concepts including data ingestion, transformation, storage, and reporting within a cloud-based architecture.
+The pipeline extracts data from an e-commerce website, cleans and structures it, and stores it across both relational (MySQL) and NoSQL (MongoDB) databases. It also incorporates workflow automation using Apache NiFi.
+
+This project highlights key data engineering concepts such as data collection, transformation, storage, and pipeline orchestration.
 
 ---
 
 ## Tech Stack
-- Azure Data Lake Gen2
-- Azure Databricks
-- Azure Synapse Analytics
-- Power BI
+- Python (BeautifulSoup, Pandas)
+- MySQL (Relational Database)
+- MongoDB (NoSQL Database)
+- Apache NiFi (Data Pipeline Automation)
 
 ---
+## Project Structure 
+├── .venv/                        # Virtual environment for dependencies
 
-## Architecture
-GitHub Dataset → Azure Data Lake Gen2 → Azure Databricks → Azure Data Lake Gen2 → Azure Synapse Analytics → Power BI
+├── data/
+│   ├── raw/                     # Raw scraped data (CSV files)
+│   └── processed/               # Cleaned and transformed datasets
+
+├── database/
+│   ├── queries.py               # SQL queries for data analysis
+│   └── schema.py                # Database schema definitions
+
+├── docs/
+│   └── report_final.pdf         # Final project report
+
+├── outputs/                     # Analysis outputs and exported results
+
+├── pipelines/
+│   └── extracted_data_*.json    # Apache NiFi pipeline outputs
+
+├── scripts/
+│   ├── cleaning.py              # Data cleaning and preprocessing
+│   ├── ingestion_*.py           # Data ingestion scripts (MySQL & MongoDB)
+│   └── .ipynb_checkpoints/      # Notebook checkpoints
+
+├── README.md
+
 
 ---
 
 ## Project Workflow
 
-### 1. Data Ingestion
-- Imported multiple raw datasets from a public GitHub repository
-- Stored raw data in Azure Data Lake Gen2 for scalable storage
+### 1. Web Scraping
+- Scraped data engineering book listings from an e-commerce website (Packt Publishing)  
+- Extracted key attributes:
+  - Title  
+  - Author(s)  
+  - Publication year  
+  - Rating  
+  - Price  
+- Stored raw data in `data/raw/` as CSV files  
 
-### 2. Data Processing
-- Used Azure Databricks to clean and transform data
-- Applied data cleaning, filtering, and aggregation techniques
-- Structured the dataset for efficient querying and analysis
+---
 
-### 3. Data Storage
-- Stored processed data back into Azure Data Lake Gen2
-- Ensured data was organised and ready for downstream analytics
+### 2. Data Cleaning & Transformation
+- Processed raw data using Python (`scripts/cleaning.py`)  
+- Performed:
+  - Handling missing values  
+  - Data formatting and type conversion  
+  - Removing duplicates and inconsistencies  
+- Saved cleaned datasets in `data/processed/`  
 
-### 4. Data Visualisation
-- Queried processed data using Azure Synapse Analytics
-- Developed dashboards in Power BI to present insights
-- Enabled clear communication of trends and key findings
+---
+
+### 3. Relational Database (MySQL)
+- Designed schema using `database/schema.py`  
+- Imported processed data into MySQL tables  
+- Ensured:
+  - Proper normalization  
+  - Efficient querying structure  
+
+---
+
+### 4. Data Analysis
+- Wrote SQL queries in `database/queries.py`  
+- Performed analysis such as:
+  - Pricing trends  
+  - Rating distributions  
+  - Author and publication insights  
+- Stored outputs in `outputs/`  
+
+---
+
+### 5. Data Pipeline Automation (Apache NiFi)
+- Built automated workflows to:
+  - Ingest data from files  
+  - Route data between systems  
+- Pipeline outputs stored in `pipelines/`  
+
+---
+
+### 6. MongoDB Integration
+- Stored semi-structured data in MongoDB  
+- Demonstrated flexibility compared to relational databases  
+- Enabled handling of varying data formats  
 
 ---
 
 ## Key Features
-- End-to-end ETL pipeline in a cloud environment
-- Scalable data storage using Azure Data Lake
-- Data transformation using distributed processing (Databricks)
-- Interactive dashboards for data-driven decision-making
+- End-to-end data pipeline from scraping to storage and analysis  
+- Modular project structure for scalability and maintainability  
+- Web scraping using Python and BeautifulSoup  
+- Dual database integration (MySQL + MongoDB)  
+- Automated data ingestion using Apache NiFi  
+- Clear separation of raw and processed data  
 
 ---
 
 ## Key Learnings
-- Understanding of cloud-based data architecture
-- Experience with ETL pipeline design and implementation
-- Data transformation and preparation techniques
-- Visualising data to support business insights
+- Web scraping and real-world data extraction  
+- Data cleaning and preprocessing techniques  
+- Relational vs NoSQL database design  
+- Writing efficient SQL queries for analysis  
+- Building automated data pipelines with Apache NiFi  
+- Structuring a scalable data engineering project  
 
 ---
 
 ## Dataset
-- Public dataset containing information on US legislators and executives
-- Includes structured information such as names, roles, states, party affiliation, and tenure
-- Used as raw input to demonstrate ingestion, transformation, and visualisation in a cloud-based pipeline
+- Scraped dataset of ~200 data engineering books from Packt Publishing  
+- Includes:
+  - Book title  
+  - Author(s)  
+  - Publication year  
+  - Star rating  
+  - Price  
+- Stored in CSV format and used across both MySQL and MongoDB  
 
 ---
 
 ## Project Background
-This project was initially developed as part of a university assignment. To deepen my understanding of data engineering workflows, I independently explored and reinforced each stage of the pipeline, gaining a broader end-to-end perspective.
+This project was initially developed as part of a group assignment. To deepen my understanding, I independently extended the project to cover the full data pipeline, including ingestion, transformation, and multi-database integration.
 
 ---
 
 ## Future Improvements
-- Automate pipeline scheduling and orchestration
-- Expand dataset size and complexity
-- Enhance dashboard interactivity and KPIs
+- Automate the web scraping process (scheduled scraping)  
+- Add data validation and error handling  
+- Expand dataset size and variety  
+- Implement logging and monitoring for pipelines  
+- Enhance analytics with advanced SQL queries and dashboards  
