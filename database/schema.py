@@ -64,6 +64,3 @@ for _, row in df.iterrows():
 conn.commit()
 cursor.close()
 conn.close()
-
-
-# %%
