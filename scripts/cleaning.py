@@ -20,7 +20,7 @@ def clean_books_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df.drop(columns=[ 'Product Type'], inplace=True)
     df.drop(columns=[ 'Number of Reviews'], inplace=True)
 
-    # Remove £ symbol from price and convert to numeric
+    # Remove 'A£' symbol from price and convert to numeric
     df['Price'] = df['Price'].str.extract(r'(\d+)')
     # Convert price to float
     df['Price'] = pd.to_numeric(df['Price'], errors='coerce')

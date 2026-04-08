@@ -1,4 +1,6 @@
 #%%
+from turtle import title
+
 import mysql.connector
 import pandas as pd
 
@@ -16,7 +18,6 @@ cursor = conn.cursor()
 def get_filtered_books():
     cursor.execute("SELECT book_title, price, star_rating FROM Books")
     return cursor.fetchall()
-
 columns = get_filtered_books ()
 print(columns)
 
@@ -28,6 +29,20 @@ def get_sorted_books(column_name, ascending=True):
     query = f"SELECT * FROM Books ORDER BY {column_name} {order}"
     cursor.execute(query)
     return cursor.fetchall()
-
 sorted_books = get_sorted_books("star_rating", ascending=False) 
 print(sorted_books)
+
+#%%
+# Query to show all rows
+
+# Query to search for specific title
+
+# Query to show rows with a star rating > 3
+
+# Query to show books in ascending order of price 
+
+# Query to show books with avaialbility > 3 
+
+
+#%%
+# Index 
