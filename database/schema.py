@@ -64,25 +64,3 @@ for _, row in df.iterrows():
 conn.commit()
 cursor.close()
 conn.close()
-
-#%%
-#Connect to MongoDB database
-from pymongo import MongoClient
-client = MongoClient("mongodb://localhost:27017/")
-db = client["book_db"]
-collection = db["books"]
-
-#%%
-# Insert data into MongoDB collection
-for _, row in df.iterrows():
-    document = {
-        "upc": row['UPC'],
-        "book_title": row['Title'],
-        "price": row['Price'],
-        "star_rating": None if pd.isna(row['Star Rating']) else row['Star Rating'],
-        "availability": None if pd.isna(row['Availability']) else row['Availability'],
-        "description": None if pd.isna(row['Description']) else row['Description'],
-        "url": row['URL']
-    }
-    collection.update_one({"upc": document["upc"]}, {"$set": document}, upsert=True)
-

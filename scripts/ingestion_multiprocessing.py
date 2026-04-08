@@ -1,7 +1,8 @@
-#%%
-# # Ingestion - Web Scraping
+## Ingestion - Web Scraping
 # Each book has been extracted from https://books.toscrape.com
 
+#%%time
+# Imports
 import requests
 import time
 import random
@@ -9,19 +10,16 @@ from bs4 import BeautifulSoup
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-# -------------------------------------------------------------------
+#%%time
 # Get request - no fancy headers needed, books.toscrape.com is open
-# -------------------------------------------------------------------
 def send_get_request(url):
     session = requests.Session()
     response = session.get(url, timeout=15)
     response.raise_for_status()
     return response
 
-
-# -------------------------------------------------------------------
+#%%time
 # Scrape a single book page
-# -------------------------------------------------------------------
 def get_book_information(url):
     try:
         response = send_get_request(url)
@@ -84,10 +82,8 @@ def get_book_information(url):
         print(f"[FAILED] {url}\n  Reason: {e}\n")
         return {"URL": url, "Error": str(e)}
 
-
-# -------------------------------------------------------------------
+#%%time
 # Step 1: Scrape all book URLs from the catalogue pages
-# -------------------------------------------------------------------
 def get_all_book_urls(base_url="https://books.toscrape.com/catalogue/category/books/sequential-art_5/"):
     book_urls = []
     page = 1
@@ -125,10 +121,7 @@ def get_all_book_urls(base_url="https://books.toscrape.com/catalogue/category/bo
 
     return book_urls
 
-
-# -------------------------------------------------------------------
-# Run
-# -------------------------------------------------------------------
+#%%time
 if __name__ == "__main__":
 
     # First collect all book URLs from the catalogue
