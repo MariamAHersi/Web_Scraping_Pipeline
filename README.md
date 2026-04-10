@@ -17,31 +17,25 @@ This project highlights key data engineering concepts such as data collection, t
 
 ---
 ## Project Structure 
+```
 ├── .venv/
-
 ├── data/
 │   ├── raw/
 │   └── processed/
-
 ├── database/
 │   ├── queries.py
 │   └── schema.py
-
 ├── docs/
 │   └── report_final.pdf
-
 ├── outputs/
-
 ├── pipelines/
 │   └── extracted_data_*.json
-
 ├── scripts/
 │   ├── cleaning.py
 │   ├── ingestion_*.py
 │   └── .ipynb_checkpoints/
-
 ├── README.md
-
+```
 
 ---
 
